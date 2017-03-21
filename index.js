@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 /// <reference path="typings/index.d.ts" />
-//require('@google-cloud/debug-agent').start({allowExpressions: true});
+require('@google-cloud/debug-agent').start({ allowExpressions: true });
 // Import the Firebase SDK for Google Cloud Functions.
 const functions = require("firebase-functions");
 // Import and initialize the Firebase Admin SDK.
@@ -64,7 +64,7 @@ exports.checkPlan = functions.https.onRequest((req, res) => __awaiter(this, void
             .then(($) => __awaiter(this, void 0, void 0, function* () {
             let rowText = $('table.mon_head td[align=right]').children().first().text();
             rowText = rowText.substring(rowText.indexOf("Stand: "));
-            const statusDate = rowText.substring(rowText.indexOf(" "));
+            const statusDate = rowText.substring(rowText.indexOf(" ")).trim();
             console.log("Stand: " + statusDate);
             const updateDateRef = admin.database().ref()
                 .child('stundenplan')

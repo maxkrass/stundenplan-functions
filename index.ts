@@ -1,7 +1,7 @@
 'use strict';
 /// <reference path="typings/index.d.ts" />
 
-//require('@google-cloud/debug-agent').start({allowExpressions: true});
+require('@google-cloud/debug-agent').start({allowExpressions: true});
 
 // Import the Firebase SDK for Google Cloud Functions.
 import * as functions from 'firebase-functions';
@@ -84,7 +84,7 @@ export let checkPlan = functions.https.onRequest( async (req, res) => {
 
                 rowText = rowText.substring( rowText.indexOf( "Stand: " ) );
 
-                const statusDate: string = rowText.substring(rowText.indexOf(" "));
+                const statusDate: string = rowText.substring(rowText.indexOf(" ")).trim();
 
                 console.log( "Stand: " + statusDate );
 

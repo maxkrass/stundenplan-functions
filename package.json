@@ -10,7 +10,9 @@
     "request": "^2.81.0",
     "request-promise": "^4.2.0"
   },
-  "build": "./node_modules/.bin/tsc",
-  "deploy": "npm run build && firebase deploy",
+  "scripts": {
+    "build": "./node_modules/.bin/tsc",
+    "deploy": "npm run build && firebase deploy"
+  },
   "private": true
 }
