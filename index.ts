@@ -17,7 +17,7 @@ import * as cheerio from 'cheerio';
 function unstrikeEverything(rows: Cheerio): Cheerio {
     console.log("Before");
     console.log(rows.html());
-    rows.find( 'strike' ).each( () => {
+    rows.find( 'strike' ).each( (index, element) => {
         $( this ).replaceWith( $( this ).text() );
     } );
     console.log("After");
