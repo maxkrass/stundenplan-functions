@@ -1,7 +1,7 @@
 'use strict';
-/// <reference path="typings/index.d.ts" />
+/* <reference path="typings/index.d.ts" />*/
 
-require('@google-cloud/debug-agent').start({allowExpressions: true});
+require( '@google-cloud/debug-agent' ).start( {allowExpressions: true} );
 
 // Import the Firebase SDK for Google Cloud Functions.
 import * as functions from 'firebase-functions';
@@ -11,26 +11,100 @@ import * as admin from 'firebase-admin';
 admin.initializeApp( functions.config().firebase );
 
 import * as request from 'request-promise';
-import * as cheerio from 'cheerio';
+import * as $ from 'cheerio';
+//import * as $ from 'jquery';
 
-function unstrikeEverything($: CheerioStatic) {
-    $( 'strike' ).each( () => {
+function unstrikeEverything(rows: Cheerio): Cheerio {
+    rows.find( 'strike' ).each( () => {
         $( this ).replaceWith( $( this ).text() );
-    } )
+    } );
+    return rows;
 }
 
-function getEvents($: CheerioStatic): SubstitutionEvent[] {
-    $( '' );
-    return [];
+function cleanString(text: string): string {
+    return replaceWith( text, " ", "&nbsp;", "\\s+", String.fromCharCode( 160 ) );
 }
 
-class SubstitutionType {
-    static Cancelled = "fällt aus";
-    static Substitution = "Vertr.";
-    static ClassChange = "Unter.-Änd.";
-    static LocationChange = "Raum-Änd.";
-    static Special = "Sond";
-    static Release = "Freisetzung";
+function replaceWith(text: string, replaceWith: string, ...find: string[]): string {
+    find.forEach( (findString: string) => {
+        text = text.split( findString ).join( replaceWith );
+    } );
+    return text;
+}
+
+function getEvents(): SubstitutionEvent[] {
+    let rows: Cheerio = unstrikeEverything( $( 'table.mon_list' ).first().find( '.odd, .even' ) );
+
+    let events: SubstitutionEvent[] = [];
+
+    rows.each( (rowIndex: number) => {
+        let row: Cheerio = $( this );
+
+        let event: SubstitutionEvent = new SubstitutionEvent();
+
+        // This flag is used to continue the outer each statement
+        let flag: boolean = true;
+
+        row.children().each( (cellIndex: number) => {
+            let cell: Cheerio = $( this );
+
+            switch (cellIndex) {
+
+                case 0:
+                    let grade: string = cleanString( cell.text().toUpperCase() );
+                    if ( grade !== "" ) {
+                        event.grade = replaceWith( grade, "", "(", ")" );
+                    } else { // this row has no Grade so we can
+                        if ( rowIndex > 0 ) { //assume that it is meant as an annotation to the last row
+                            events[events.length - 1].annotation += row.children()[7];
+                            // since this row is just annotation, let's continue with the next one
+                            flag = false;
+                            // And of course also break this each
+                            return flag;
+                        }
+                    }
+                    break;
+                case 1:
+                    event.period = cleanString( cell.text() );
+                    break;
+                case 2:
+                    event.subject = cleanString( cell.text().toUpperCase() );
+                    break;
+                case 3:
+                    event.type = SubstitutionType.getTypeByString( cleanString( cell.text() ) );
+                    break;
+                case 4:
+                    event.oldTeacher = cleanString( cell.text() );
+                    break;
+                case 5:
+                    if ( event.type !== SubstitutionType.Cancelled ) {
+                        event.sub = cleanString( cell.text() );
+                    }
+                    break;
+                case 6:
+                    if ( event.type !== SubstitutionType.Cancelled ) {
+                        event.newLocation = cleanString( cell.text() );
+                    }
+                    break;
+                case 7:
+                    event.annotation = cleanString( cell.text() );
+                    break;
+
+            }
+
+        } );
+
+        // continue if the flag was changed
+        if ( !flag ) {
+            return
+        }
+
+        // We're done with this row, add the event to the array
+        events.push(event);
+
+    } );
+
+    return events;
 }
 
 class SubstitutionEvent {
@@ -42,6 +116,68 @@ class SubstitutionEvent {
     private _sub: string;
     private _newLocation: string;
     private _annotation: string;
+
+
+    set grade(value: string) {
+        this._grade = value;
+    }
+
+    set period(value: string) {
+        this._period = value;
+    }
+
+    set subject(value: string) {
+        this._subject = value;
+    }
+
+    set type(value: SubstitutionType) {
+        this._type = value;
+    }
+
+    set oldTeacher(value: string) {
+        this._oldTeacher = value;
+    }
+
+    set sub(value: string) {
+        this._sub = value;
+    }
+
+    set newLocation(value: string) {
+        this._newLocation = value;
+    }
+
+    set annotation(value: string) {
+        this._annotation = value;
+    }
+}
+
+class SubstitutionType {
+
+    static Cancelled = "fällt aus";
+    static Substitution = "Vertr.";
+    static ClassChange = "Unter.-Änd.";
+    static LocationChange = "Raum-Änd.";
+    static Special = "Sond";
+    static Release = "Freisetzung";
+
+    static getTypeByString(s: string): SubstitutionType {
+        switch (s) {
+            case "fällt aus":
+                return SubstitutionType.Cancelled;
+            case "Vertr.":
+                return SubstitutionType.Substitution;
+            case "Unter.-Änd.":
+                return SubstitutionType.ClassChange;
+            case "Raum-Änd.":
+                return SubstitutionType.LocationChange;
+            case "Sond":
+                return SubstitutionType.Special;
+            case "Freisetzung":
+                return SubstitutionType.Release;
+            default:
+                return null;
+        }
+    }
 }
 
 export let checkPlan = functions.https.onRequest( async (req, res) => {
@@ -71,7 +207,7 @@ export let checkPlan = functions.https.onRequest( async (req, res) => {
         const options = {
             uri: urls[i],
             transform: function (body) {
-                return cheerio.load( body );
+                return $.load( body );
             }
         };
 
@@ -84,7 +220,7 @@ export let checkPlan = functions.https.onRequest( async (req, res) => {
 
                 rowText = rowText.substring( rowText.indexOf( "Stand: " ) );
 
-                const statusDate: string = rowText.substring(rowText.indexOf(" ")).trim();
+                const statusDate: string = rowText.substring( rowText.indexOf( " " ) ).trim();
 
                 console.log( "Stand: " + statusDate );
 
@@ -108,9 +244,9 @@ export let checkPlan = functions.https.onRequest( async (req, res) => {
 
                     substitutionPlan.correspondingDate = dateText.substring( 0, dateText.indexOf( ', Woche ' ) );
 
-                    substitutionPlan.plan = getEvents( $ );
+                    substitutionPlan.plan = getEvents();
 
-                    unstrikeEverything( $ );
+                    //unstrikeEverything( $ );
 
                 } else {
 
@@ -121,10 +257,7 @@ export let checkPlan = functions.https.onRequest( async (req, res) => {
                 }
 
             } )
-            .catch( async (err) => {
-
-
-
+            .catch( async () => {
             } );
 
 
