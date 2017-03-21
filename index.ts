@@ -17,8 +17,12 @@ import * as cheerio from 'cheerio';
 function unstrikeEverything(rows: Cheerio): Cheerio {
     console.log("Before");
     console.log(rows.html());
-    rows.find( 'strike' ).each( (index, element) => {
+    let strikes: Cheerio = rows.find( 'strike' );
+    console.log("<strikes> : " + strikes.length);
+    strikes.each(function()  {
+        console.log("before");
         $( this ).replaceWith( $( this ).text() );
+        console.log("after");
     } );
     console.log("After");
     console.log(rows.html());

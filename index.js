@@ -21,8 +21,12 @@ const cheerio = require("cheerio");
 function unstrikeEverything(rows) {
     console.log("Before");
     console.log(rows.html());
-    rows.find('strike').each((index, element) => {
+    let strikes = rows.find('strike');
+    console.log("<strikes> : " + strikes.length);
+    strikes.each(function () {
+        console.log("before");
         $(this).replaceWith($(this).text());
+        console.log("after");
     });
     console.log("After");
     console.log(rows.html());
