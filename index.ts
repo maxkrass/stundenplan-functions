@@ -12,20 +12,13 @@ admin.initializeApp( functions.config().firebase );
 
 import * as request from 'request-promise';
 import * as cheerio from 'cheerio';
-//import * as $ from 'jquery';
 
-function unstrikeEverything(rows: Cheerio): Cheerio {
-    console.log("Before");
-    console.log(rows.html());
+function unstrikeEverything($: CheerioStatic, rows: Cheerio): Cheerio {
     let strikes: Cheerio = rows.find( 'strike' );
-    console.log("<strikes> : " + strikes.length);
-    strikes.each(function()  {
-        console.log("before");
-        $( this ).replaceWith( $( this ).text() );
-        console.log("after");
+    strikes.each(() => {
+        let replaceText: string = $( this ).text();
+        $( this ).replaceWith( replaceText );
     } );
-    console.log("After");
-    console.log(rows.html());
     return rows;
 }
 
@@ -41,20 +34,24 @@ function replaceWith(text: string, replaceWith: string, ...find: string[]): stri
 }
 
 function getEvents($: CheerioStatic): SubstitutionEvent[] {
-    let rows: Cheerio = unstrikeEverything( $( 'table.mon_list' ).first().find( '.odd, .even' ) );
+    let rows: Cheerio = unstrikeEverything($,  $( 'table.mon_list' ).first().find( '.odd, .even' ) );
 
-    let events: SubstitutionEvent[] = [];
+    const events: SubstitutionEvent[] = [];
+    let event: SubstitutionEvent;
 
     rows.each( (rowIndex: number) => {
         let row: Cheerio = $( this );
 
-        let event: SubstitutionEvent = new SubstitutionEvent();
+        event = new SubstitutionEvent();
 
         // This flag is used to continue the outer each statement
         let flag: boolean = true;
 
         row.children().each( (cellIndex: number) => {
             let cell: Cheerio = $( this );
+
+            console.log("switching now");
+            console.log(cell);
 
             switch (cellIndex) {
 
@@ -96,6 +93,7 @@ function getEvents($: CheerioStatic): SubstitutionEvent[] {
                     break;
                 case 7:
                     event.annotation = cleanString( cell.text() );
+                    console.log(event);
                     break;
 
             }

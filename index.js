@@ -17,19 +17,12 @@ const admin = require("firebase-admin");
 admin.initializeApp(functions.config().firebase);
 const request = require("request-promise");
 const cheerio = require("cheerio");
-//import * as $ from 'jquery';
-function unstrikeEverything(rows) {
-    console.log("Before");
-    console.log(rows.html());
+function unstrikeEverything($, rows) {
     let strikes = rows.find('strike');
-    console.log("<strikes> : " + strikes.length);
-    strikes.each(function () {
-        console.log("before");
-        $(this).replaceWith($(this).text());
-        console.log("after");
+    strikes.each(() => {
+        let replaceText = $(this).text();
+        $(this).replaceWith(replaceText);
     });
-    console.log("After");
-    console.log(rows.html());
     return rows;
 }
 function cleanString(text) {
@@ -42,15 +35,18 @@ function replaceWith(text, replaceWith, ...find) {
     return text;
 }
 function getEvents($) {
-    let rows = unstrikeEverything($('table.mon_list').first().find('.odd, .even'));
-    let events = [];
+    let rows = unstrikeEverything($, $('table.mon_list').first().find('.odd, .even'));
+    const events = [];
+    let event;
     rows.each((rowIndex) => {
         let row = $(this);
-        let event = new SubstitutionEvent();
+        event = new SubstitutionEvent();
         // This flag is used to continue the outer each statement
         let flag = true;
         row.children().each((cellIndex) => {
             let cell = $(this);
+            console.log("switching now");
+            console.log(cell);
             switch (cellIndex) {
                 case 0:
                     let grade = cleanString(cell.text().toUpperCase());
@@ -91,6 +87,7 @@ function getEvents($) {
                     break;
                 case 7:
                     event.annotation = cleanString(cell.text());
+                    console.log(event);
                     break;
             }
         });
