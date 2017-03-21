@@ -16,12 +16,16 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp(functions.config().firebase);
 const request = require("request-promise");
-const $ = require("cheerio");
+const cheerio = require("cheerio");
 //import * as $ from 'jquery';
 function unstrikeEverything(rows) {
+    console.log("Before");
+    console.log(rows.html());
     rows.find('strike').each(() => {
         $(this).replaceWith($(this).text());
     });
+    console.log("After");
+    console.log(rows.html());
     return rows;
 }
 function cleanString(text) {
@@ -33,7 +37,7 @@ function replaceWith(text, replaceWith, ...find) {
     });
     return text;
 }
-function getEvents() {
+function getEvents($) {
     let rows = unstrikeEverything($('table.mon_list').first().find('.odd, .even'));
     let events = [];
     rows.each((rowIndex) => {
@@ -167,7 +171,7 @@ exports.checkPlan = functions.https.onRequest((req, res) => __awaiter(this, void
         const options = {
             uri: urls[i],
             transform: function (body) {
-                return $.load(body);
+                return cheerio.load(body);
             }
         };
         const substitutionPlan = { statusDate: '', correspondingDate: '', plan: [] };
@@ -189,7 +193,7 @@ exports.checkPlan = functions.https.onRequest((req, res) => __awaiter(this, void
                 substitutionPlan.statusDate = statusDate;
                 const dateText = $('div.mon_title').first().text().trim();
                 substitutionPlan.correspondingDate = dateText.substring(0, dateText.indexOf(', Woche '));
-                substitutionPlan.plan = getEvents();
+                substitutionPlan.plan = getEvents($);
                 //unstrikeEverything( $ );
             }
             else {

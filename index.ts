@@ -11,13 +11,17 @@ import * as admin from 'firebase-admin';
 admin.initializeApp( functions.config().firebase );
 
 import * as request from 'request-promise';
-import * as $ from 'cheerio';
+import * as cheerio from 'cheerio';
 //import * as $ from 'jquery';
 
 function unstrikeEverything(rows: Cheerio): Cheerio {
+    console.log("Before");
+    console.log(rows.html());
     rows.find( 'strike' ).each( () => {
         $( this ).replaceWith( $( this ).text() );
     } );
+    console.log("After");
+    console.log(rows.html());
     return rows;
 }
 
@@ -32,7 +36,7 @@ function replaceWith(text: string, replaceWith: string, ...find: string[]): stri
     return text;
 }
 
-function getEvents(): SubstitutionEvent[] {
+function getEvents($: CheerioStatic): SubstitutionEvent[] {
     let rows: Cheerio = unstrikeEverything( $( 'table.mon_list' ).first().find( '.odd, .even' ) );
 
     let events: SubstitutionEvent[] = [];
@@ -207,7 +211,7 @@ export let checkPlan = functions.https.onRequest( async (req, res) => {
         const options = {
             uri: urls[i],
             transform: function (body) {
-                return $.load( body );
+                return cheerio.load( body );
             }
         };
 
@@ -244,7 +248,7 @@ export let checkPlan = functions.https.onRequest( async (req, res) => {
 
                     substitutionPlan.correspondingDate = dateText.substring( 0, dateText.indexOf( ', Woche ' ) );
 
-                    substitutionPlan.plan = getEvents();
+                    substitutionPlan.plan = getEvents($);
 
                     //unstrikeEverything( $ );
 
